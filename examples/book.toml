@@ -1,0 +1,13 @@
+[book]
+title = "mdbook-track Demo"
+authors = ["Seb"]
+language = "en"
+src = "src"
+
+[preprocessor.track]
+book-id = "mdbook-track-demo"
+renderers = ["html"]
+
+[output.html]
+additional-js = ["mdbook-track.js"]
+additional-css = ["mdbook-track.css"]
