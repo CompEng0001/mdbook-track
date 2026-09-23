@@ -1,24 +1,4 @@
-<div align="center">
-  <h1 align="center"><b>mdbook-track</b></h1>
-</div>
-
-<p align="center">
-  <a href="https://crates.io/crates/mdbook-track">
-    <img src="https://img.shields.io/crates/v/mdbook-track?style=for-the-badge" alt="Crates.io version" />
-  </a>
-  <a href="https://crates.io/crates/mdbook-track">
-    <img src="https://img.shields.io/crates/d/mdbook-track?style=for-the-badge" alt="Downloads" />
-  </a>
-  <a href="https://docs.rs/mdbook-track">
-    <img src="https://img.shields.io/docsrs/mdbook-track?style=for-the-badge" alt="Docs.rs" />
-  </a>
-  <a href="https://github.com/CompEng0001/mdbook-track/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/CompEng0001/mdbook-track/release.yml?&style=for-the-badge&label=CI" alt="CI status" />
-  </a>
-  <img src="https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust&style=for-the-badge" alt="Built with Rust" />
-</p>
-
-An <a href="https://github.com/rust-lang/mdBook">mdBook</a> preprocessor that injects Git metadata (commit hash, full hash, tag, date/time, branch) into each chapter — as a header, a footer, or both — with flexible templates, alignment, and CSS-style margins.
+# mdbook-track
 
 `mdbook-track` adds browser-local progress tracking to teaching and learning mdBooks.
 Progress is stored in `localStorage`; there is no account, backend, export/import, or analytics.
@@ -119,26 +99,6 @@ IDs may contain letters, numbers, `-`, `_`, and `.`.
 
 Checking an inline `track-item` immediately updates the matching entry in `track-checklist`, and checking the checklist entry updates the inline item. Both are views of the same `localStorage` value.
 
-### Indentation inside Markdown lists
-
-`mdbook-track` preserves the leading indentation of a tracker directive on every generated HTML line. This allows a tracker to remain structurally inside an ordered or unordered Markdown list item instead of being pulled back to the page margin. Place the directive at the indentation level where you want the tracker to belong:
-
-```md
-1. Install Git.
-
-   {{#track-item install-git}}
-   Installed Git
-   {{/track-item}}
-
-2. Create a GitHub account.
-
-   {{#track-item github-account}}
-   GitHub account creation
-   {{/track-item}}
-```
-
-The tracker row will then align with the content of the corresponding list item. The same indentation-preserving behaviour is applied to `{{#track}}`, `{{#track-checklist}}`, and `{{#track-overview}}`.
-
 ## Workbook overview
 
 Place this in `Introduction.md` (or any other page):
@@ -195,6 +155,8 @@ mdbook serve
 ```
 
 
-## Styling note (v0.2.3)
+## Styling
 
 Completed tracker rows use a solid `#84ad24` border and a 25% alpha fill (`rgb(132 173 36 / 25%)`).
+
+The workbook overview uses the same accent colour for overall and section progress bars, with compact chapter status indicators for not-started, in-progress, and completed chapters.

@@ -181,6 +181,62 @@
         };
     }
 
+    function percentage(completed, total) {
+        if (!total) return 0;
+        return Math.max(0, Math.min(100, (completed / total) * 100));
+    }
+
+    function progressBar(className, completed, total, label) {
+        const bar = document.createElement("div");
+        bar.className = className;
+        bar.setAttribute("role", "progressbar");
+        bar.setAttribute("aria-valuemin", "0");
+        bar.setAttribute("aria-valuemax", String(total));
+        bar.setAttribute("aria-valuenow", String(completed));
+        if (label) bar.setAttribute("aria-label", label);
+
+        const fill = document.createElement("div");
+        fill.className = `${className}-fill`;
+        fill.style.setProperty(
+            "--mdbook-track-progress",
+            `${percentage(completed, total)}%`,
+        );
+        bar.appendChild(fill);
+        return bar;
+    }
+
+    function bookRootUrl() {
+        const script = [...document.scripts].find((node) => {
+            if (!node.src) return false;
+            try {
+                const url = new URL(node.src, document.baseURI);
+                return url.pathname.endsWith("/mdbook-track.js");
+            } catch (_) {
+                return false;
+            }
+        });
+
+        if (script?.src) {
+            return new URL(".", script.src);
+        }
+
+        return new URL(".", document.baseURI);
+    }
+
+    function chapterOutputPath(pageId) {
+        if (!pageId) return "";
+
+        // mdBook chapter source paths normally end in .md. Keep the logical
+        // book-relative path, but point the overview at the generated HTML.
+        return pageId.replace(/\.(?:md|markdown)$/i, ".html");
+    }
+
+    function chapterHref(page) {
+        const outputPath = chapterOutputPath(page.id);
+        if (!outputPath) return "#";
+        return new URL(outputPath, bookRootUrl()).href;
+    }
+
     function renderOverview(overview, manifest) {
         const bookId = overview.dataset.bookId;
         if (!bookId || !manifest || !Array.isArray(manifest.pages)) return;
@@ -219,28 +275,77 @@
         heading.appendChild(overall);
         content.appendChild(heading);
 
-        const progress = document.createElement("progress");
-        progress.className = "mdbook-track-overview__progress";
-        progress.max = Math.max(totalItems, 1);
-        progress.value = completedItems;
-        progress.setAttribute("aria-label", "Workbook item completion");
-        content.appendChild(progress);
+        content.appendChild(
+            progressBar(
+                "mdbook-track-overview__progress",
+                completedItems,
+                totalItems,
+                "Workbook item completion",
+            ),
+        );
 
         for (const [section, entries] of groups) {
             const sectionNode = document.createElement("section");
             sectionNode.className = "mdbook-track-overview__section";
 
+            let sectionTotal = 0;
+            let sectionCompleted = 0;
+            let sectionCompletedPages = 0;
+            for (const { stats } of entries) {
+                sectionTotal += stats.total;
+                sectionCompleted += stats.completed;
+                sectionCompletedPages += stats.complete ? 1 : 0;
+            }
+
+            const sectionHeader = document.createElement("div");
+            sectionHeader.className = "mdbook-track-overview__section-header";
+
             const sectionTitle = document.createElement("h3");
+            sectionTitle.className = "mdbook-track-overview__section-title";
             sectionTitle.textContent = section;
-            sectionNode.appendChild(sectionTitle);
+
+            const sectionCount = document.createElement("span");
+            sectionCount.className = "mdbook-track-overview__section-count";
+            sectionCount.textContent = `${sectionCompletedPages} / ${entries.length} chapters · ${sectionCompleted} / ${sectionTotal} items`;
+
+            sectionHeader.append(sectionTitle, sectionCount);
+            sectionNode.appendChild(sectionHeader);
+            sectionNode.appendChild(
+                progressBar(
+                    "mdbook-track-overview__section-progress",
+                    sectionCompleted,
+                    sectionTotal,
+                    `${section} item completion`,
+                ),
+            );
 
             const list = document.createElement("ul");
             list.className = "mdbook-track-overview__list";
 
             for (const { page, stats } of entries) {
-                const row = document.createElement("li");
+                const entry = document.createElement("li");
+                entry.className = "mdbook-track-overview__entry";
+
+                const row = document.createElement("a");
                 row.className = "mdbook-track-overview__row";
-                if (stats.complete) row.classList.add("mdbook-track-overview__row--complete");
+                row.href = chapterHref(page);
+                row.setAttribute("aria-label", `${page.title}: ${stats.completed} of ${stats.total} items completed`);
+
+                if (stats.complete) {
+                    row.classList.add("mdbook-track-overview__row--complete");
+                } else if (stats.completed > 0) {
+                    row.classList.add("mdbook-track-overview__row--progress");
+                } else {
+                    row.classList.add("mdbook-track-overview__row--not-started");
+                }
+
+                const status = document.createElement("span");
+                status.className = "mdbook-track-overview__status";
+                status.setAttribute("aria-hidden", "true");
+                status.style.setProperty(
+                    "--mdbook-track-row-progress",
+                    `${percentage(stats.completed, stats.total)}%`,
+                );
 
                 const label = document.createElement("span");
                 label.className = "mdbook-track-overview__title";
@@ -250,8 +355,9 @@
                 count.className = "mdbook-track-overview__count";
                 count.textContent = `${stats.completed} / ${stats.total}`;
 
-                row.append(label, count);
-                list.appendChild(row);
+                row.append(status, label, count);
+                entry.appendChild(row);
+                list.appendChild(entry);
             }
 
             sectionNode.appendChild(list);

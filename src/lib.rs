@@ -163,16 +163,12 @@ fn process_chapter(chapter: &mut Chapter, book_id: &str, manifest_json: &str) ->
             .as_deref()
             .context("chapter containing track-checklist has no source path")?;
         let checklist = render_tracker(book_id, page_id, &inline_items);
-        chapter.content = replace_directive_preserving_indent(
-            &chapter.content,
-            TRACK_CHECKLIST,
-            &checklist,
-        );
+        chapter.content = chapter.content.replace(TRACK_CHECKLIST, &checklist);
     }
 
     if chapter.content.contains(OVERVIEW) {
         let overview = render_overview(book_id, manifest_json);
-        chapter.content = replace_directive_preserving_indent(&chapter.content, OVERVIEW, &overview);
+        chapter.content = chapter.content.replace(OVERVIEW, &overview);
     }
 
     Ok(())
@@ -329,12 +325,10 @@ fn replace_track_block(content: &str, replacement: &str) -> Result<String> {
         bail!("found {TRACK_OPEN} without matching {TRACK_CLOSE}");
     };
     let end = body_start + relative_end + TRACK_CLOSE.len();
-    let indent = line_indent_at(content, start);
-    let replacement = indent_continuation_lines(replacement, indent);
 
     let mut output = String::with_capacity(content.len() + replacement.len());
     output.push_str(&content[..start]);
-    output.push_str(&replacement);
+    output.push_str(replacement);
     output.push_str(&content[end..]);
     Ok(output)
 }
@@ -347,53 +341,11 @@ fn replace_inline_track_items(content: &str, book_id: &str, page_id: &str) -> Re
 
     let mut output = content.to_owned();
     for entry in entries.into_iter().rev() {
-        let indent = line_indent_at(content, entry.start);
         let replacement = render_inline_tracker(book_id, page_id, &entry.item);
-        let replacement = indent_continuation_lines(&replacement, indent);
         output.replace_range(entry.start..entry.end, &replacement);
     }
 
     Ok(output)
-}
-
-fn replace_directive_preserving_indent(content: &str, directive: &str, replacement: &str) -> String {
-    let mut output = String::with_capacity(content.len() + replacement.len());
-    let mut cursor = 0usize;
-
-    while let Some(relative_start) = content[cursor..].find(directive) {
-        let start = cursor + relative_start;
-        let end = start + directive.len();
-        let indent = line_indent_at(content, start);
-        let replacement = indent_continuation_lines(replacement, indent);
-
-        output.push_str(&content[cursor..start]);
-        output.push_str(&replacement);
-        cursor = end;
-    }
-
-    output.push_str(&content[cursor..]);
-    output
-}
-
-fn line_indent_at(content: &str, position: usize) -> &str {
-    let line_start = content[..position]
-        .rfind('\n')
-        .map_or(0, |index| index + 1);
-    let prefix = &content[line_start..position];
-
-    if prefix.chars().all(|ch| matches!(ch, ' ' | '\t')) {
-        prefix
-    } else {
-        ""
-    }
-}
-
-fn indent_continuation_lines(value: &str, indent: &str) -> String {
-    if indent.is_empty() || !value.contains('\n') {
-        return value.to_owned();
-    }
-
-    value.replace('\n', &format!("\n{indent}"))
 }
 
 fn chapter_page_id(chapter: &Chapter) -> Result<String> {
@@ -642,35 +594,6 @@ Read the pointers chapter
         let content = "# Title\n\n{{#track}}\n- One\n{{/track}}\n\nBody\n";
         let output = replace_track_block(content, "<tracker></tracker>").unwrap();
         assert_eq!(output, "# Title\n\n<tracker></tracker>\n\nBody\n");
-    }
-
-
-    #[test]
-    fn preserves_inline_tracker_indentation() {
-        let content = "1. Install Git\n\n   {{#track-item install-git}}\n   Installed Git\n   {{/track-item}}\n";
-        let output = replace_inline_track_items(content, "book", "chapter.md").unwrap();
-
-        for line in output.lines().filter(|line| line.contains("mdbook-track") || line.contains("data-track-item")) {
-            assert!(line.starts_with("   "), "generated line lost list indentation: {line:?}");
-        }
-    }
-
-    #[test]
-    fn preserves_checklist_indentation() {
-        let content = "1. Parent item\n\n   {{#track-checklist}}\n";
-        let replacement = "<section>\n<div>Checklist</div>\n</section>";
-        let output = replace_directive_preserving_indent(content, TRACK_CHECKLIST, replacement);
-
-        assert!(output.contains("   <section>\n   <div>Checklist</div>\n   </section>"));
-    }
-
-    #[test]
-    fn does_not_infer_indent_for_inline_directive_text() {
-        let content = "Prefix {{#track-checklist}} suffix";
-        let replacement = "<section>\n<div>Checklist</div>\n</section>";
-        let output = replace_directive_preserving_indent(content, TRACK_CHECKLIST, replacement);
-
-        assert!(output.contains("Prefix <section>\n<div>Checklist</div>\n</section> suffix"));
     }
 
     #[test]

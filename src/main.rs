@@ -31,6 +31,10 @@ fn run() -> Result<()> {
             initialise_assets(Path::new(&root))?;
             Ok(())
         }
+        Some("--version") | Some("-V") => {
+            print_version();
+            Ok(())
+        }
         Some("--help") | Some("-h") | Some("help") => {
             print_help();
             Ok(())
@@ -73,11 +77,16 @@ fn initialise_assets(root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn print_help() {
+fn print_version() {
     println!("mdbook-track {}", env!("CARGO_PKG_VERSION"));
+}
+
+fn print_help() {
+    print_version();
     println!();
     println!("USAGE:");
     println!("  mdbook-track                 Run as an mdBook preprocessor");
     println!("  mdbook-track supports html   Check renderer support");
     println!("  mdbook-track init [BOOK]     Install JS/CSS assets into a book");
+    println!("  mdbook-track --version       Print version information");
 }
