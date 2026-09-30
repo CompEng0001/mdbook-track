@@ -1,11 +1,14 @@
 [package]
 name = "mdbook-track"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2024"
 rust-version = "1.88"
 description = "Local chapter checklist progress tracking for mdBook"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CompEng0001/mdbook-track"
+readme = "README.md"
+keywords = ["mdbook", "git", "preprocessor", "documentation"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "1"
